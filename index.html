@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preliminary Design: Slab, Beam &amp; Column</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/index.css">
+</head>
+<body>
+    <div class="background-shapes">
+        <div class="shape shape-1"></div>
+        <div class="shape shape-2"></div>
+        <div class="shape shape-3"></div>
+    </div>
+
+    <div class="container">
+        <header>
+            <h1>Preliminary Design</h1>
+            <p class="subtitle">Slab, beam and column sizing in one tool</p>
+        </header>
+
+        <nav class="tab-nav" role="tablist">
+            <button type="button" class="tab-btn active" role="tab" data-tab="slab-tab">Slab</button>
+            <button type="button" class="tab-btn" role="tab" data-tab="beam-tab">Beam</button>
+            <button type="button" class="tab-btn" role="tab" data-tab="col-tab">Column</button>
+        </nav>
+
+        <!-- ===================== SLAB ===================== -->
+        <div class="tab-panel active" id="slab-tab" role="tabpanel">
+            <main class="app-layout">
+            <!-- Input Section -->
+            <section class="glass-panel input-section">
+                <h2>Design Parameters</h2>
+                <form id="slab-form">
+                    
+                    <div class="input-group">
+                        <label for="slab-length">Slab Length (L)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="slab-length" name="L" required min="1" step="any" placeholder="e.g. 4000">
+                            <span class="unit">mm</span>
+                        </div>
+                        <small class="help-text">The total length of the slab.</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="slab-breadth">Slab Breadth (B)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="slab-breadth" name="B" required min="1" step="any" placeholder="e.g. 3000">
+                            <span class="unit">mm</span>
+                        </div>
+                        <small class="help-text">The total breadth/width of the slab.</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="slab-support">Deflection Criteria</label>
+                        <select id="slab-support" name="support" required>
+                            <option value="SS">Simply Supported (L/d = 25)</option>
+                            <option value="Cont">Continuous (L/d = 32)</option>
+                        </select>
+                        <small class="help-text">Determines the Deflection Control Factor (X = α β γ λ δ).</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="slab-cover">Nominal Cover (c)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="slab-cover" name="c" required min="0" step="any" value="15">
+                            <span class="unit">mm</span>
+                        </div>
+                        <small class="help-text">Default is 15 mm as per standard notes.</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="slab-phi">Bar Diameter (phi)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="slab-phi" name="phi" required min="1" step="any" placeholder="e.g. 10">
+                            <span class="unit">mm</span>
+                        </div>
+                        <small class="help-text">Main reinforcement bar diameter.</small>
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        Calculate Depth
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Results Section -->
+            <section class="glass-panel result-section" id="slab-result-section" style="display: none;">
+                <div class="result-header">
+                    <h2>Calculation Results</h2>
+                    <div id="slab-status-badge" class="badge"></div>
+                </div>
+                
+                <p id="slab-main-message" class="main-message"></p>
+
+
+
+                <div class="raw-calculations" id="slab-raw-calculations">
+                    <div style="font-family: inherit; background: rgba(0,0,0,0.2); padding: 1.5rem; border-radius: 0.5rem; margin-bottom: 1.5rem; color: var(--text-main); font-size: 1.1rem; line-height: 1.8;">
+                        <div><strong>Slab Type:</strong> <span id="slab-val-slab-type" style="color: var(--primary); font-weight: 600;"></span></div>
+                        <div><strong>Minimum effective depth:</strong> <span id="slab-val-d-min"></span> mm</div>
+                        <div><strong>Overall depth:</strong> <span id="slab-val-d-calc"></span> mm</div>
+                    </div>
+                </div>
+
+                <div class="final-verdict" id="slab-final-verdict-container">
+                    <div class="verdict-card">
+                        <span class="verdict-label">Final Overall Depth</span>
+                        <span class="verdict-value" id="slab-val-d-final"></span>
+                    </div>
+                </div>
+
+                <div id="slab-revise-note" class="alert warning" style="display: none;">
+                    <strong>Design Recommendation:</strong> The required depth exceeds 150 mm. Consider introducing a secondary beam to reduce the effective span and re-calculate.
+                </div>
+
+
+            </section>
+        </main>
+        </div>
+
+        <!-- ===================== BEAM ===================== -->
+        <div class="tab-panel" id="beam-tab" role="tabpanel">
+            <main class="app-layout">
+            <!-- Input Section -->
+            <section class="glass-panel input-section">
+                <h2>Design Parameters</h2>
+                <form id="beam-form">
+
+                    <h3 class="form-section-title">Dimensions &amp; Grid Layout</h3>
+
+                    <div class="input-group">
+                        <label for="beam-lb">Clear Span of Critical Beam (l<sub>b</sub>)</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="beam-lb" name="lb" required min="0.01" step="any" placeholder="e.g. 5">
+                            <span class="unit">m</span>
+                        </div>
+                        <small class="help-text">Beam with the maximum tributary area on the plan.</small>
+                    </div>
+
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="beam-Ab">Tributary Area (A<sub>b</sub>)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-Ab" name="Ab" required min="0.01" step="any" placeholder="e.g. 15">
+                                <span class="unit">m²</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="beam-Ds">Slab Thickness (D<sub>s</sub>)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-Ds" name="Ds" required min="0.001" step="any" placeholder="e.g. 0.125">
+                                <span class="unit">m</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="three-col">
+                        <div class="input-group">
+                            <label for="beam-lw">Wall Length (l<sub>w</sub>)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-lw" name="lw" min="0" step="any" value="0">
+                                <span class="unit">m</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="beam-bw">Wall Width (b<sub>w</sub>)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-bw" name="bw" min="0" step="any" value="0">
+                                <span class="unit">m</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="beam-tw">Wall Height (t<sub>w</sub>)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-tw" name="tw" min="0" step="any" value="0">
+                                <span class="unit">m</span>
+                            </div>
+                        </div>
+                    </div>
+                    <small class="help-text" style="margin-top:-0.75rem; margin-bottom:1.5rem;">Wall resting over the beam. Leave 0 if there is no wall.</small>
+
+                    <h3 class="form-section-title">Loading &amp; Unit Weights</h3>
+
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="beam-gamma_c">Concrete Unit Weight (γ<sub>c</sub>)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-gamma_c" name="gamma_c" required min="0" step="any" value="25">
+                                <span class="unit">kN/m³</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="beam-gamma_w">Wall Unit Weight (γ<sub>w</sub>)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-gamma_w" name="gamma_w" required min="0" step="any" value="20">
+                                <span class="unit">kN/m³</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="beam-LL">Live Load (LL)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-LL" name="LL" required min="0" step="any" placeholder="e.g. 3">
+                                <span class="unit">kN/m²</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="beam-FL">Floor Finish Load (FL)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-FL" name="FL" required min="0" step="any" placeholder="e.g. 1">
+                                <span class="unit">kN/m²</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="beam-eta_option">Wall Opening Reduction Factor (η)</label>
+                        <select id="beam-eta_option" name="eta_option" required>
+                            <option value="1.0">No opening (η = 1.0)</option>
+                            <option value="0.8">Door (η = 0.8)</option>
+                            <option value="0.65">Window (η = 0.65)</option>
+                            <option value="custom">Enter manually</option>
+                        </select>
+                        <div class="input-wrapper" id="beam-eta-custom-wrapper" style="display:none; margin-top:0.75rem;">
+                            <input type="number" id="beam-eta_custom" name="eta_custom" min="0.01" max="1" step="any" placeholder="e.g. 0.7">
+                        </div>
+                    </div>
+
+                    <h3 class="form-section-title">Preliminary Sizing Ratios</h3>
+
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="beam-ratio_span_depth">Span / Effective Depth (l/d)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-ratio_span_depth" name="ratio_span_depth" required min="10" max="15" step="any" value="12">
+                            </div>
+                            <small class="help-text">Allowed range 10 to 15 (mid-range = 12).</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="beam-ratio_depth_width">Depth / Width (d/b)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-ratio_depth_width" name="ratio_depth_width" required min="1.5" max="2.5" step="any" value="2">
+                            </div>
+                            <small class="help-text">Allowed range 1.5 to 2.5 (mid-range = 2.0).</small>
+                        </div>
+                    </div>
+
+                    <h3 class="form-section-title">Materials &amp; Detailing</h3>
+
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="beam-fck">Concrete Strength (f<sub>ck</sub>)</label>
+                            <div class="input-wrapper">
+                                <input type="number" id="beam-fck" name="fck" required min="1" step="any" placeholder="e.g. 20">
+                                <span class="unit">N/mm²</span>
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="beam-fy">Steel Yield Strength (f<sub>y</sub>)</label>
+                            <select id="beam-fy" name="fy" required>
+                                <option value="500">Fe 500 (X = 0.1336)</option>
+                                <option value="415">Fe 415 (X = 0.138)</option>
+                                <option value="250">Fe 250 (X = 0.148)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="beam-support">Support Condition</label>
+                        <select id="beam-support" name="support" required>
+                            <option value="SS">Simply Supported (M = wl²/8)</option>
+                            <option value="Cont">Continuous (M = wl²/10)</option>
+                        </select>
+                        <small class="help-text">Determines the maximum bending moment.</small>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="beam-d_dash">Effective Cover (d')</label>
+                        <div class="input-wrapper">
+                            <input type="number" id="beam-d_dash" name="d_dash" required min="0" step="any" value="40">
+                            <span class="unit">mm</span>
+                        </div>
+                        <small class="help-text">d' = c + φ/2 (e.g., 40 mm or 50 mm).</small>
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        Calculate Beam Size
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Results Section -->
+            <section class="glass-panel result-section" id="beam-result-section" style="display: none;">
+                <div class="result-header">
+                    <h2>Calculation Results</h2>
+                    <div id="beam-status-badge" class="badge"></div>
+                </div>
+
+                <p id="beam-main-message" class="main-message"></p>
+
+                <div class="raw-calculations" id="beam-raw-calculations">
+                    <div class="result-lines">
+                        <div><strong>Trial Effective Depth (d<sub>trial</sub>):</strong> <span id="beam-val-d-trial"></span> mm</div>
+                        <div><strong>Trial Width (b<sub>trial</sub>):</strong> <span id="beam-val-b-trial"></span> mm</div>
+                        <div><strong>Trial Overall Depth (D<sub>trial</sub>):</strong> <span id="beam-val-D-trial"></span> mm</div>
+                        <div><strong>Assumed Preliminary Size:</strong> <span class="val" id="beam-val-trial-size"></span> mm</div>
+                        <hr>
+                        <div><strong>Total Service Load (W):</strong> <span id="beam-val-W"></span> kN</div>
+                        <div><strong>UDL (w):</strong> <span id="beam-val-w"></span> kN/m</div>
+                        <div><strong>Maximum Bending Moment (M<sub>max</sub>):</strong> <span id="beam-val-M"></span> kNm</div>
+                        <hr>
+                        <div><strong>Moment Factor (X):</strong> <span id="beam-val-X"></span></div>
+                        <div><strong>Required Effective Depth (d<sub>req</sub>):</strong> <span id="beam-val-d-req"></span> mm</div>
+                        <div><strong>Required Overall Depth (D<sub>req</sub>):</strong> <span id="beam-val-D-req"></span> mm</div>
+                        <div><strong>Governing Depth (D<sub>gov</sub>):</strong> <span id="beam-val-D-gov"></span> mm</div>
+                        <div><strong>Final Effective Depth (d<sub>final</sub>):</strong> <span id="beam-val-d-final"></span> mm</div>
+                    </div>
+                </div>
+
+                <div class="final-verdict" id="beam-final-verdict-container">
+                    <div class="verdict-card">
+                        <span class="verdict-label">Final Adopted Beam Size (b × D)</span>
+                        <span class="verdict-value" id="beam-val-final-size"></span>
+                    </div>
+                </div>
+
+                <div id="beam-revise-note" class="alert warning" style="display: none;">
+                    <strong>Note:</strong> Flexure governs over the deflection-based trial depth, so the overall depth was increased to satisfy moment capacity.
+                </div>
+            </section>
+        </main>
+        </div>
+
+        <!-- ===================== COLUMN ===================== -->
+        <div class="tab-panel" id="col-tab" role="tabpanel">
+            <main class="app-layout">
+            <section class="glass-panel input-section">
+                <h2>Design Parameters</h2>
+                <form id="column-form">
+
+                    <h3 class="form-section-title">Influence Area &amp; Geometry</h3>
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="col-Ac">Influence Area (A<sub>c</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-Ac" name="Ac" required min="0.01" step="any" placeholder="e.g. 25"><span class="unit">m²</span></div>
+                            <small class="help-text">Tributary area of the critical column.</small>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-N_storey">Number of Storeys (N)</label>
+                            <div class="input-wrapper"><input type="number" id="col-N_storey" name="N_storey" required min="1" step="1" placeholder="e.g. 4"></div>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="col-Ds">Slab Thickness (D<sub>s</sub>)</label>
+                        <div class="input-wrapper"><input type="number" id="col-Ds" name="Ds" required min="0.001" step="any" placeholder="e.g. 0.125"><span class="unit">m</span></div>
+                    </div>
+
+                    <div class="three-col">
+                        <div class="input-group">
+                            <label for="col-lbc">Beam Length (l<sub>bc</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-lbc" name="lbc" min="0" step="any" value="0"><span class="unit">m</span></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-bb">Beam Width (b<sub>b</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-bb" name="bb" min="0" step="any" value="0"><span class="unit">m</span></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-Db">Beam Depth (D<sub>b</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-Db" name="Db" min="0" step="any" value="0"><span class="unit">m</span></div>
+                        </div>
+                    </div>
+                    <small class="help-text" style="margin-top:-0.75rem; margin-bottom:1.5rem;">Beams framing into the column (total length, overall depth). Leave 0 to ignore.</small>
+
+                    <div class="three-col">
+                        <div class="input-group">
+                            <label for="col-lw">Wall Length (l<sub>w</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-lw" name="lw" min="0" step="any" value="0"><span class="unit">m</span></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-bw">Wall Width (b<sub>w</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-bw" name="bw" min="0" step="any" value="0"><span class="unit">m</span></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-tw">Wall Height (t<sub>w</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-tw" name="tw" min="0" step="any" value="0"><span class="unit">m</span></div>
+                        </div>
+                    </div>
+                    <small class="help-text" style="margin-top:-0.75rem; margin-bottom:1.5rem;">Wall supported per floor. Leave 0 if there is no wall.</small>
+
+                    <h3 class="form-section-title">Loading &amp; Unit Weights</h3>
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="col-gamma_c">Concrete Unit Weight (γ<sub>c</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-gamma_c" name="gamma_c" required min="0" step="any" value="25"><span class="unit">kN/m³</span></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-gamma_w">Wall Unit Weight (γ<sub>w</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-gamma_w" name="gamma_w" required min="0" step="any" value="20"><span class="unit">kN/m³</span></div>
+                        </div>
+                    </div>
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="col-LL">Live Load (LL)</label>
+                            <div class="input-wrapper"><input type="number" id="col-LL" name="LL" required min="0" step="any" placeholder="e.g. 3"><span class="unit">kN/m²</span></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-FL">Floor Finish Load (FL)</label>
+                            <div class="input-wrapper"><input type="number" id="col-FL" name="FL" required min="0" step="any" placeholder="e.g. 1"><span class="unit">kN/m²</span></div>
+                        </div>
+                    </div>
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="col-eta_option">Wall Opening Factor (η)</label>
+                            <select id="col-eta_option" name="eta_option" required>
+                                <option value="1.0">No opening (η = 1.0)</option>
+                                <option value="0.8">Door (η = 0.8)</option>
+                                <option value="0.65">Window (η = 0.65)</option>
+                                <option value="custom">Enter manually</option>
+                            </select>
+                            <div class="input-wrapper" id="col-eta-custom-wrapper" style="display:none; margin-top:0.75rem;">
+                                <input type="number" id="col-eta_custom" name="eta_custom" min="0.01" max="1" step="any" placeholder="e.g. 0.7">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-K_seismic">Seismic Factor (K<sub>seismic</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-K_seismic" name="K_seismic" required min="1.25" max="1.3" step="any" value="1.30"></div>
+                            <small class="help-text">Allowed range 1.25 to 1.30.</small>
+                        </div>
+                    </div>
+
+                    <h3 class="form-section-title">Materials &amp; Reinforcement</h3>
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="col-fck">Concrete Strength (f<sub>ck</sub>)</label>
+                            <div class="input-wrapper"><input type="number" id="col-fck" name="fck" required min="1" step="any" placeholder="e.g. 25"><span class="unit">N/mm²</span></div>
+                        </div>
+                        <div class="input-group">
+                            <label for="col-fy">Steel Yield Strength (f<sub>y</sub>)</label>
+                            <select id="col-fy" name="fy" required>
+                                <option value="500">Fe 500</option>
+                                <option value="415">Fe 415</option>
+                                <option value="250">Fe 250</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="col-p_steel">Longitudinal Steel (p)</label>
+                        <div class="input-wrapper"><input type="number" id="col-p_steel" name="p_steel" required min="0.8" max="4" step="any" value="1"><span class="unit">% of A<sub>gross</sub></span></div>
+                        <small class="help-text">Default 1 %. Allowed range 0.8 to 4 %.</small>
+                    </div>
+
+                    <h3 class="form-section-title">Column Shape</h3>
+                    <div class="two-col">
+                        <div class="input-group">
+                            <label for="col-section_type">Section Type</label>
+                            <select id="col-section_type" name="section_type" required>
+                                <option value="Square">Square (b = D)</option>
+                                <option value="Rectangular">Rectangular (D &gt; b)</option>
+                            </select>
+                        </div>
+                        <div class="input-group" id="col-aspect-group" style="display:none;">
+                            <label for="col-aspect_r">Aspect Ratio (D/b)</label>
+                            <div class="input-wrapper"><input type="number" id="col-aspect_r" name="aspect_r" min="1" max="3" step="any" value="1.5"></div>
+                            <small class="help-text">Default 1.5 (range 1.0 to 3.0).</small>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        Calculate Column Size
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                    </button>
+                </form>
+            </section>
+
+            <section class="glass-panel result-section" id="col-result-section" style="display: none;">
+                <div class="result-header">
+                    <h2>Calculation Results</h2>
+                    <div id="col-status-badge" class="badge success"></div>
+                </div>
+                <p id="col-main-message" class="main-message"></p>
+
+                <div class="raw-calculations">
+                    <div class="result-lines">
+                        <div><strong>Slab Load (W<sub>slab</sub>):</strong> <span id="col-val-W-slab"></span> kN</div>
+                        <div><strong>Beam Self-Weight (W<sub>beam</sub>):</strong> <span id="col-val-W-beam"></span> kN</div>
+                        <div><strong>Wall Load (W<sub>wall</sub>):</strong> <span id="col-val-W-wall"></span> kN</div>
+                        <div><strong>Single-Floor Load (W<sub>floor</sub>):</strong> <span id="col-val-W-floor"></span> kN</div>
+                        <hr>
+                        <div><strong>Total Service Load (W<sub>total</sub>):</strong> <span id="col-val-W-total"></span> kN</div>
+                        <div><strong>Seismic Factor (K<sub>seismic</sub>):</strong> <span id="col-val-K"></span></div>
+                        <div><strong>Ultimate Load (P<sub>u</sub>):</strong> <span id="col-val-Pu"></span> kN</div>
+                        <hr>
+                        <div><strong>Required Gross Area (A<sub>gross</sub>):</strong> <span id="col-val-A-gross"></span> mm²</div>
+                        <div><strong>Calculated Width (b<sub>calc</sub>):</strong> <span id="col-val-b-calc"></span> mm</div>
+                        <div><strong>Calculated Depth (D<sub>calc</sub>):</strong> <span id="col-val-D-calc"></span> mm</div>
+                        <hr>
+                        <div><strong>Provided Area (A<sub>provided</sub>):</strong> <span id="col-val-A-prov"></span> mm²</div>
+                        <div><strong>Steel Area (A<sub>steel</sub>, <span id="col-val-p"></span> %):</strong> <span id="col-val-A-steel"></span> mm²</div>
+                    </div>
+                </div>
+
+                <div class="final-verdict">
+                    <div class="verdict-card">
+                        <span class="verdict-label">Final Adopted Column Size (b × D)</span>
+                        <span class="verdict-value" id="col-val-final-size"></span>
+                    </div>
+                </div>
+            </section>
+        </main>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
